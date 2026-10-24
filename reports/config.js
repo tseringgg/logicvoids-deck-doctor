@@ -4,10 +4,13 @@
  *   prefill      "clipboard": the report (card, group, search, page address) is copied for the tester to paste into the channel; use this for Discord, which cannot take pre-filled fields.
  *                "query": the report is added to the address as ?title=...&body=..., for a form or issue tracker that accepts them (the parameter names are below).
  *   titleParam, bodyParam   the names used by "query".
+ *   TESTER_FILTERS  true: group pages get a filter and sort bar (colour, type, mana value) and a "Narrow by group" row (reports/testerfilters.js and .css are loaded and exported).
+ *                   false: neither file is requested or exported, and every other file is unchanged.
  */
 window.APP_CONFIG = {
   feedbackUrl: "https://discord.gg/DUwMhDCcMg",
   prefill: "clipboard",
   titleParam: "title",
-  bodyParam: "body"
+  bodyParam: "body",
+  TESTER_FILTERS: true
 };
