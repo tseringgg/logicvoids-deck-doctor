@@ -9708,9 +9708,9 @@
    "sha256": "205887695d58e4d21336de7bdfc1f85ade3e588fc2ac1aeb70158be9bb57860d"
   },
   {
-   "bytes": 2317,
+   "bytes": 3310,
    "path": "reports/config.js",
-   "sha256": "41cb6a7a18b89c4521c11918fa028c29c933fb4b1e573c04017cd460667ecf53"
+   "sha256": "b514bbc537ad3385bb15333d81b968e5306508325cab8be79508d7eb8d788065"
   },
   {
    "bytes": 636,
@@ -9748,9 +9748,9 @@
    "sha256": "9e6ffb956cbf2f1eb90e60fdd36d968a5007cb6b04b4d46e6f0d5b134e9038fe"
   },
   {
-   "bytes": 42688,
+   "bytes": 55441,
    "path": "reports/tester.js",
-   "sha256": "cef3468e5d4b99c02d020789095bbb423a5ab6a991bc3617d11ebac377631fd5"
+   "sha256": "69ff727425d1af29924c62c9ba4484d9271be58935190806783a98c45a6627ad"
   },
   {
    "bytes": 3677,
@@ -9758,9 +9758,9 @@
    "sha256": "df4dee0a7b6e810f3b8664285854e8e7f4779dd94aa1a28d44492b458aab05c0"
   },
   {
-   "bytes": 31699,
+   "bytes": 34557,
    "path": "reports/testerfilters.js",
-   "sha256": "b1a1cfc6e247ab781378ac5d59acf0d2320010f8225ff6d3a3b173fddcbd3611"
+   "sha256": "531ec4076955085f9eb099cf2233230b7efd207335aee07d85fe01cfe75cc925"
   },
   {
    "bytes": 499,
@@ -9802,11 +9802,11 @@
    "gzip6_bytes": 19199
   },
   "page": {
-   "bytes": 354040,
+   "bytes": 370644,
    "files": 16,
-   "gzip6_bytes": 109922
+   "gzip6_bytes": 115595
   }
  },
- "total_bytes": 42190349,
- "total_gzip6_bytes": 13873388
+ "total_bytes": 42206953,
+ "total_gzip6_bytes": 13879061
 }
