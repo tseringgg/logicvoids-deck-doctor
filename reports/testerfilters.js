@@ -1,7 +1,15 @@
 /* Tester mode, feature TESTER_FILTERS (reports/config.js): a filter and sort bar on group pages (colour, type, mana value, sort) and a "Narrow by group" row.
  * Loaded by reports/tester.js only when the flag is on, and only in tester mode. Presentation only: it reads facts the page already holds (CARDS: name, type line, colour, mana value) and the group
  * memberships the group pages themselves list (members, sibling, tentative, loose, tag, keyword and replacement files, hand placements), and changes no group, id, placement, suggestion or figure.
- * Nothing is fetched: every number is computed in the page.
+ * Nothing is fetched: every number is computed in the page (flag-gated extras below fetch their own lazy files through typegroups.js / flipfaces.js).
+ *
+ * Flags (reports/config.js; each absent or false means the rules in the first block below, exactly):
+ *   NARROW_NO_CUT  the "Narrow by group" chips drop the 3-card minimum: a chip needs 2 shared cards; a "Show single-card groups" link adds the 1-card chips. Order: shared count, then the smaller group,
+ *                  then name. Chips that pick exactly the same cards on this list are folded into the first. 12 shown, "Show more" adds 12 up to 60. The row is shown (with its count in the folded 390 px
+ *                  line) even when it has no chip. The 90% cap, the zero-count hiding and the near-twin rules are unchanged.
+ *   COLOUR_MODES   colour match: "Any of these" (default, today's rule), "Includes all", "Only these", "Not these". The colourless and multicolour chips are extra conditions in the last three.
+ *   TYPE_GROUPS    (typegroups.js) adds a "Subtype" row: a card passes if any face has the chosen type, supertype or subtype (OR inside the row). Type pages themselves are never offered as chips.
+ *   FLIP_FACES     (flipfaces.js) colour and type read both faces of a two-faced card (the union); a card shown only because of its other face says so.
  *
  * Rules (src/test_tester_static.py re-derives them in Python and compares):
  *   filter: AND across kinds (colour, type, mana value), OR inside a kind. Colour is the card's colour, not its colour identity. Facts are those of the face the page lists (a split card: its first half).
@@ -21,6 +29,15 @@
   const jac = (a, b) => { if (!a.size || !b.size) return 0; let i = 0; for (const x of a) if (b.has(x)) i++; return i / (a.size + b.size - i); };
   const mobile = () => window.matchMedia("(max-width: 800px)").matches;
   const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const FLG = window.APP_CONFIG || {};
+  const NNC = FLG.NARROW_NO_CUT === true, CMODES = FLG.COLOUR_MODES === true, TGON = FLG.TYPE_GROUPS === true;
+  if (CMODES) {                                                                              // the match-mode rules live here, so testerfilters.css is the file it always was
+    const st = document.createElement("style");
+    st.textContent = ".cmsel{display:none}.fpip[aria-disabled=true]{cursor:not-allowed}@media (max-width:800px){.cmseg{display:none}.cmsel{display:block}}";
+    document.head.appendChild(st);
+  }
+  const CMODE_NAMES = [["any", "Any of these"], ["all", "Includes all"], ["only", "Only these"], ["not", "Not these"]];
+  const typesOf = ty => String(ty).split(" - ")[0].split(" ").filter(t => TYPES.indexOf(t) >= 0);
 
   // ---------------------------------------------------------------- facts (from CARDS, which the page already holds)
   const FACTS = new Map();
@@ -28,12 +45,33 @@
     let f = FACTS.get(oid);
     if (f) return f;
     const c = CARDS[oid] || { n: "", ty: "", col: "", mv: null };
-    f = { nm: c.n.toLowerCase(), mv: c.mv == null ? null : c.mv, col: c.col || "", ts: c.ty.split(" - ")[0].split(" ").filter(t => TYPES.indexOf(t) >= 0) };
+    f = { nm: c.n.toLowerCase(), mv: c.mv == null ? null : c.mv, col: c.col || "", ts: typesOf(c.ty), oid: oid };
+    const fl = window.FL && FL.on() ? FL.get(oid) : null;                 // FLIP_FACES: a two-faced card is read from both faces (colours and types are the union)
+    if (fl) {
+      let col = "", ts = new Set(f.ts);
+      for (const x of fl.f) { col += x.c; for (const t of typesOf(x.ty)) ts.add(t); }
+      f.col = "WUBRG".split("").filter(x => col.indexOf(x) >= 0).join(""); f.ts = TYPES.filter(t => ts.has(t));
+    }
     f.mvb = f.mv == null ? "none" : f.mv >= 6 ? "6+" : String(f.mv);
     FACTS.set(oid, f);
     return f;
   }
   const colMatch = (f, c) => c === "C" ? f.col === "" : c === "M" ? f.col.length >= 2 : f.col.indexOf(c) >= 0;
+  // colour match in the four modes; "any" is the rule the page always had. X = the card's colours, L = chosen colour letters, c / m = the colourless / multicolour chips.
+  function colOk(col, cols, mode) {
+    if (!cols.size) return true;
+    if (!CMODES || mode === "any") { for (const c of cols) if (colMatch({ col: col }, c)) return true; return false; }
+    const L = [...cols].filter(x => x !== "C" && x !== "M"), c = cols.has("C"), m = cols.has("M"), n = col.length;
+    if (mode === "all") { for (const l of L) if (col.indexOf(l) < 0) return false; return !(c && n) && !(m && n < 2); }
+    if (mode === "only") {
+      if (n === 0) return c;
+      if (m && !L.length) return n >= 2;
+      for (const ch of col) if (L.indexOf(ch) < 0) return false;
+      return !(m && n < 2);
+    }
+    for (const l of L) if (col.indexOf(l) >= 0) return false;                                 // "not"
+    return !(c && n === 0) && !(m && n >= 2);
+  }
 
   // ---------------------------------------------------------------- group membership, the way the group pages list it (built once, rebuilt if a source file arrives later)
   let IDX = null, IDXSIG = "";
@@ -78,12 +116,14 @@
   }
 
   // ---------------------------------------------------------------- state: one per page (reset when another page opens)
-  const fresh = () => ({ k: null, cols: new Set(), types: new Set(), mvs: new Set(), sort: "best", nar: [], nshow: 12, open: false, nopen: false });
+  const fresh = () => ({ k: null, cols: new Set(), cmode: "any", types: new Set(), subs: new Set(), mvs: new Set(), sort: "best", nar: [], nshow: 12, single: false, open: false, nopen: false });
   let ST = fresh();
-  const active = () => ST.cols.size || ST.types.size || ST.mvs.size || ST.nar.length;
+  const active = () => ST.cols.size || ST.types.size || ST.subs.size || ST.mvs.size || ST.nar.length;
+  const subOk = (oid, subs) => { for (const k of subs) if (TG.has(k, oid)) return true; return false; };
   function pass(f, skip) {
-    if (skip !== "col" && ST.cols.size) { let ok = false; for (const c of ST.cols) if (colMatch(f, c)) { ok = true; break; } if (!ok) return false; }
+    if (skip !== "col" && ST.cols.size && !colOk(f.col, ST.cols, ST.cmode)) return false;
     if (skip !== "type" && ST.types.size) { let ok = false; for (const t of ST.types) if (f.ts.indexOf(t) >= 0) { ok = true; break; } if (!ok) return false; }
+    if (skip !== "sub" && ST.subs.size && !subOk(f.oid, ST.subs)) return false;
     if (skip !== "mv" && ST.mvs.size && !ST.mvs.has(f.mvb)) return false;
     return true;
   }
@@ -92,13 +132,22 @@
 
   // ---------------------------------------------------------------- narrowing chips for a list of cards
   const PAGEINFO = { k: "", n: -1, twins: null };
+  // NARROW_NO_CUT: a chip whose name only restates the page's ("Mill cards" on "Library › Mill cards, by you", "Attach to a creature" on "Attach to a creature you control"): every word of the shorter name
+  // (plurals folded, 2 words or more) is in the longer one. "Create Treasure tokens" on "Create Food tokens" is not a restatement.
+  const fold = s => new Set([...s].map(w => w.replace(/s$/, "")));
+  function restates(a, b) {
+    const x = fold(a), y = fold(b), [s, l] = x.size <= y.size ? [x, y] : [y, x];
+    if (s.size < 2) return false;
+    for (const w of s) if (!l.has(w)) return false;
+    return true;
+  }
   function twinKeys(pageOids, key, idx) {
     if (PAGEINFO.k === key && PAGEINFO.n === pageOids.length && PAGEINFO.sig === IDXSIG) return PAGEINFO.twins;
     const o = ownKeys(key), cnt = new Map(), twins = new Set(), ownNK = o.names.concat([...o.own].map(k => idx.name.get(k)).filter(Boolean)).map(nameKey);
     for (const oid of pageOids) { const a = idx.of.get(oid); if (a) for (const k of a) cnt.set(k, (cnt.get(k) || 0) + 1); }
     for (const [k, n] of cnt) {
       const nk = idx.nk.get(k); let tw = false;
-      for (const a of ownNK) if (jac(nk, a) >= 0.7) { tw = true; break; }
+      for (const a of ownNK) if (jac(nk, a) >= 0.7 || (NNC && restates(nk, a))) { tw = true; break; }
       if (!tw) { const size = idx.mem.get(k).size; if (n / (pageOids.length + size - n) >= 0.8) tw = true; }
       if (tw) twins.add(k);
     }
@@ -109,13 +158,22 @@
     const idx = buildIndex(), own = ownKeys(key).own, twins = twinKeys(pageOids, key, idx), cnt = new Map(), N = list.length;
     for (const oid of list) { const a = idx.of.get(oid); if (a) for (const k of a) if (!own.has(k)) cnt.set(k, (cnt.get(k) || 0) + 1); }
     const sel = new Set(ST.nar), cand = [];
-    for (const [k, n] of cnt) { if (n < 3 || n * 10 >= N * 9 || twins.has(k) || sel.has(k)) continue; cand.push({ key: k, n: n, label: clean(idx.name.get(k)), loose: idx.loose.get(k) }); }
-    cand.sort((a, b) => b.n - a.n || cmp(a.label, b.label) || cmp(a.key, b.key));
-    const kept = [];
+    const floor = NNC ? 1 : 3;                                                                  // NARROW_NO_CUT: every chip with a shared card is a candidate; the floor of 2 is applied below, after folding
+    for (const [k, n] of cnt) { if (n < floor || n * 10 >= N * 9 || twins.has(k) || sel.has(k)) continue; cand.push({ key: k, n: n, label: clean(idx.name.get(k)), loose: idx.loose.get(k), size: idx.mem.get(k).size }); }
+    if (NNC) cand.sort((a, b) => b.n - a.n || a.size - b.size || cmp(a.label, b.label) || cmp(a.key, b.key));
+    else cand.sort((a, b) => b.n - a.n || cmp(a.label, b.label) || cmp(a.key, b.key));
+    const kept = [], sigs = new Set();
+    let sigOf = null;
+    if (NNC) {                                                                                  // the cards of this list each chip would keep, in list order: equal text = the same choice
+      const by = new Map(); for (const c of cand) by.set(c.key, []);
+      for (const oid of list) { const a = idx.of.get(oid); if (a) for (const k of a) { const l = by.get(k); if (l) l.push(oid); } }
+      sigOf = k => by.get(k).join("|");
+    }
     for (const c of cand) {
       let dup = false;
-      for (const d of kept) { if (jac(idx.nk.get(c.key), idx.nk.get(d.key)) >= 0.7) { dup = true; break; } const A = idx.mem.get(c.key), B = idx.mem.get(d.key); let i = 0; for (const x of A) if (B.has(x)) i++; if (i / (A.size + B.size - i) >= 0.8) { dup = true; break; } }
-      if (!dup) kept.push(c);
+      if (NNC) { const sg = sigOf(c.key); if (sigs.has(sg)) continue; }
+      for (const d of kept) { if (jac(idx.nk.get(c.key), idx.nk.get(d.key)) >= 0.7) { dup = true; break; } const A = idx.mem.get(c.key), B = idx.mem.get(d.key); if (Math.min(A.size, B.size) * 10 < Math.max(A.size, B.size) * 8) continue; let i = 0; for (const x of A) if (B.has(x)) i++; if (i / (A.size + B.size - i) >= 0.8) { dup = true; break; } }
+      if (!dup) { kept.push(c); if (NNC) sigs.add(sigOf(c.key)); }
     }
     return kept;
   }
@@ -176,38 +234,70 @@
   function summary(idx) {
     const p = [];
     for (const c of ST.cols) p.push(colName(c));
+    if (CMODES && ST.cols.size && ST.cmode !== "any") p.push(CMODE_NAMES.find(x => x[0] === ST.cmode)[1]);
     for (const t of ST.types) p.push(t);
+    for (const k of ST.subs) p.push(TG.name(k));
     for (const m of ST.mvs) p.push(m === "none" ? "No cost" : "MV " + m);
     if (ST.nar.length) p.push(ST.nar.length + " group" + (ST.nar.length > 1 ? "s" : ""));
     return p.join(" · ");
   }
+  function modeOptions() { return CMODE_NAMES.map(([v, n]) => `<option value="${v}"${ST.cmode === v ? " selected" : ""}>${n}</option>`).join(""); }
+  function subRow() {
+    if (!(TGON && window.TG && TG.enabled)) return "";
+    if (!TG.ready()) { TG.loadIndex().then(() => { try { refresh(); } catch (e) { /* page changed */ } }); return ""; }
+    const chips = [...ST.subs].map(k => `<button type="button" class="fch on x" data-f="subx" data-v="${esc2(k)}" title="Remove: ${esc2(TG.name(k))}">${esc2(TG.name(k))}</button>`).join("");
+    return `<div class="frow"><span class="flab">Subtype</span><div class="fgrp">${chips}<select class="fsel" data-f="sub" aria-label="Add a subtype or supertype"><option value="">Add a subtype or supertype…</option>${TG.options(ST.subs)}</select></div></div>` +
+      `<div class="fnote">Any of the chosen. A card counts if either face has it.</div>`;
+  }
   function barHTML(fullOids, shown, ctx) {
     const idx = buildIndex(), fc = facetCounts(fullOids, idx);
-    const pipHTML = COLS.map(([c, n]) => `<button type="button" class="fpip p${c}${ST.cols.has(c) ? " on" : ""}${!fc.cc[c] && !ST.cols.has(c) ? " dim" : ""}" data-f="col" data-v="${c}" aria-pressed="${ST.cols.has(c)}" aria-label="${n}, ${fc.cc[c]} cards" title="${n} (${fc.cc[c]})">${c === "C" ? "◇" : c}</button>`).join("");
+    const mOff = CMODES && ST.cmode === "only";
+    const pipHTML = COLS.map(([c, n]) => {
+      const off = mOff && c === "M";
+      return `<button type="button" class="fpip p${c}${ST.cols.has(c) ? " on" : ""}${(!fc.cc[c] && !ST.cols.has(c)) || off ? " dim" : ""}" data-f="col" data-v="${c}" aria-pressed="${ST.cols.has(c)}"${off ? ' aria-disabled="true"' : ""} aria-label="${n}, ${fc.cc[c]} cards" ` +
+        `title="${off ? "Multicolour can’t be combined with Only these. Pick the colours instead, for example W and U for white-blue cards." : `${n} (${fc.cc[c]})`}">${c === "C" ? "◇" : c}</button>`;
+    }).join("");
+    const modeHTML = CMODES ? `<div class="frow cmrow"><span class="flab">Match</span><div class="fgrp cmseg" role="radiogroup" aria-label="Colour match">` +
+      CMODE_NAMES.map(([v, n]) => `<button type="button" role="radio" class="fch cm${ST.cmode === v ? " on" : ""}" data-f="cmode" data-v="${v}" aria-checked="${ST.cmode === v}">${n}</button>`).join("") +
+      `</div><select class="fsel cmsel" data-f="cmodesel" aria-label="Colour match">${modeOptions()}</select></div>` : "";
     const typeHTML = TYPES.filter(t => fullOids.some(o => factsOf(o).ts.indexOf(t) >= 0) || ST.types.has(t)).map(t => `<button type="button" class="fch${ST.types.has(t) ? " on" : ""}${!fc.tc[t] && !ST.types.has(t) ? " dim" : ""}" data-f="type" data-v="${t}" aria-pressed="${ST.types.has(t)}">${t} <b>${fmt(fc.tc[t])}</b></button>`).join("");
     const mvHTML = MVS.map(([m, n]) => `<button type="button" class="fch${ST.mvs.has(m) ? " on" : ""}${!fc.mc[m] && !ST.mvs.has(m) ? " dim" : ""}" data-f="mv" data-v="${m}" aria-pressed="${ST.mvs.has(m)}">${n} <b>${fmt(fc.mc[m])}</b></button>`).join("");
     const sortHTML = `<select class="fsel" data-f="sort" aria-label="Sort"><option value="best"${ST.sort === "best" ? " selected" : ""}>Best match</option><option value="mv"${ST.sort === "mv" ? " selected" : ""}>Mana value</option><option value="name"${ST.sort === "name" ? " selected" : ""}>Name</option></select>`;
     const status = `Showing <b>${fmt(shown)}</b> of ${fmt(fullOids.length)}`;
     const sm = summary(idx);
-    const nrow = narrowHTML(ctx.list, fullOids, ctx.key, idx);
+    const nr = narrowHTML(ctx.list, fullOids, ctx.key, idx);
+    const nline = NNC ? `${nr.count} group${nr.count === 1 ? "" : "s"}${ST.nar.length ? " · " + ST.nar.length + " on" : ""}` : (ST.nar.length ? ST.nar.length + " on" : "none on");
     return `<div class="fwrap" data-open="${ST.open ? 1 : 0}" data-nopen="${ST.nopen ? 1 : 0}">` +
       `<button type="button" class="fsum" data-f="fold" aria-expanded="${ST.open}"><span>Filter and sort</span><span class="fpills">${esc2(sm) || "none on"}</span><span>${status}</span><span aria-hidden="true">${ST.open ? "▾" : "▸"}</span></button>` +
-      `<div class="fbar"><div class="frow"><span class="flab">Colour</span><div class="fgrp">${pipHTML}</div></div><div class="fnote">Card colour, not colour identity</div>` +
-      `<div class="frow"><span class="flab">Type</span><div class="fgrp">${typeHTML}</div></div>` +
+      `<div class="fbar"><div class="frow"><span class="flab">Colour</span><div class="fgrp">${pipHTML}</div></div>${modeHTML}<div class="fnote">Card colour, not colour identity</div>` +
+      `<div class="frow"><span class="flab">Type</span><div class="fgrp">${typeHTML}</div></div>` + subRow() +
       `<div class="frow"><span class="flab">Mana value</span><div class="fgrp">${mvHTML}</div></div>` +
       `<div class="frow"><span class="flab">Sort</span>${sortHTML}</div>` +
       `<div class="fstat"><span>${status}</span>${active() ? `<button type="button" class="flink" data-f="clear">Clear filters</button>` : ""}</div></div>` +
-      (nrow ? `<button type="button" class="fsum" data-f="nfold" aria-expanded="${ST.nopen}"><span>Narrow by group</span><span class="fpills">${ST.nar.length ? ST.nar.length + " on" : "none on"}</span><span aria-hidden="true">${ST.nopen ? "▾" : "▸"}</span></button>` + nrow : "") + `</div>`;
+      (nr.html ? `<button type="button" class="fsum" data-f="nfold" aria-expanded="${ST.nopen}"><span>Narrow by group</span><span class="fpills">${nline}</span><span aria-hidden="true">${ST.nopen ? "▾" : "▸"}</span></button>` + nr.html : "") + `</div>`;
+  }
+  // the chips for the list as it stands: with NARROW_NO_CUT the floor is 2 (1 with "Show single-card groups"), at most 60; otherwise the rule the page always had
+  function chipSet(list, pageOids, key) {
+    const all = chipsFor(list, pageOids, key);
+    if (!NNC) return { all: all, vis: all, singles: 0 };
+    const main = all.filter(c => c.n >= 2);
+    return { all: all, vis: (ST.single ? all : main).slice(0, 60), total: (ST.single ? all : main).length, singles: all.length - main.length };
   }
   function narrowHTML(list, pageOids, key, idx) {
-    const chips = chipsFor(list, pageOids, key);
-    if (!chips.length && !ST.nar.length) return "";
+    const cs = chipSet(list, pageOids, key), chips = cs.vis;
+    if (!chips.length && !ST.nar.length && !(NNC && cs.singles)) { if (!NNC) return { html: "", count: 0 }; }
     const selH = ST.nar.map(k => `<button type="button" class="fch on x${idx.loose.get(k) ? " lo" : ""}" data-f="narx" data-v="${esc2(k)}" title="Remove: ${esc2(idx.name.get(k))}">${esc2(clean(idx.name.get(k)))}</button>`).join("");
     const shown = chips.slice(0, ST.nshow);
     const chH = shown.map(c => `<button type="button" class="fch${c.loose ? " lo" : ""}" data-f="nar" data-v="${esc2(c.key)}" title="${esc2(idx.name.get(c.key))}">${esc2(c.label)} <b>${fmt(c.n)}</b></button>`).join("");
     const more = chips.length > shown.length ? `<button type="button" class="flink" data-f="nmore">Show more (${shown.length} of ${chips.length} shown)</button>` : "";
-    return `<div class="nrow"><div class="frow"><span class="flab">Narrow by group</span>${selH}${ST.nar.length ? `<button type="button" class="flink" data-f="nclear">Clear</button>` : ""}</div>` +
-      `<div class="fgrp">${chH}${more}</div><div class="fnote">Counts are for the cards showing now. Dashed means grouped loosely.</div></div>`;
+    let note = "Counts are for the cards showing now. Dashed means grouped loosely.";
+    if (NNC) {
+      if (!chips.length) note = "No other group has 2 or more of these cards. " + note;
+      if (cs.total > 60) note += ` Showing the 60 groups with the most cards of ${fmt(cs.total)}.`;
+    }
+    const single = NNC && (cs.singles || ST.single) ? `<button type="button" class="flink" data-f="single">${ST.single ? "Hide single-card groups" : `Show single-card groups (${fmt(cs.singles)})`}</button>` : "";
+    return { count: NNC ? cs.total : chips.length, html: `<div class="nrow"><div class="frow"><span class="flab">Narrow by group</span>${selH}${ST.nar.length ? `<button type="button" class="flink" data-f="nclear">Clear</button>` : ""}</div>` +
+      `<div class="fgrp">${chH}${more}${single}</div><div class="fnote">${note}</div></div>` };
   }
 
   // ---------------------------------------------------------------- the members list
@@ -269,12 +359,16 @@
     const b = e.target.closest("[data-f]");
     if (!b || !$("panel").contains(b)) return;
     const f = b.dataset.f, v = b.dataset.v;
+    if (b.getAttribute("aria-disabled") === "true") { e.stopPropagation(); return; }           // the multicolour chip under "Only these"
     if (f === "col" || f === "type" || f === "mv") { const s = f === "col" ? ST.cols : f === "type" ? ST.types : ST.mvs; if (s.has(v)) s.delete(v); else s.add(v); }
+    else if (f === "cmode") { ST.cmode = v; if (v === "only") ST.cols.delete("M"); }
+    else if (f === "subx") ST.subs.delete(v);
+    else if (f === "single") { ST.single = !ST.single; }
     else if (f === "nar") { if (!ST.nar.includes(v)) ST.nar.push(v); }
     else if (f === "narx") ST.nar = ST.nar.filter(k => k !== v);
     else if (f === "nclear") ST.nar = [];
-    else if (f === "nmore") ST.nshow += 12;
-    else if (f === "clear") { ST.cols.clear(); ST.types.clear(); ST.mvs.clear(); ST.nar = []; }
+    else if (f === "nmore") ST.nshow = Math.min(NNC ? 60 : 1e9, ST.nshow + 12);
+    else if (f === "clear") { ST.cols.clear(); ST.types.clear(); ST.subs.clear(); ST.mvs.clear(); ST.nar = []; ST.cmode = "any"; }
     else if (f === "fold") ST.open = !ST.open;
     else if (f === "nfold") ST.nopen = !ST.nopen;
     else return;
@@ -282,14 +376,28 @@
     refresh();
   }, true);
   document.addEventListener("change", e => {
-    const s = e.target.closest && e.target.closest("select[data-f=sort]");
+    const s = e.target.closest && e.target.closest("select[data-f]");
     if (!s || !$("panel").contains(s)) return;
-    ST.sort = s.value; refresh();
+    if (s.dataset.f === "sort") { ST.sort = s.value; refresh(); }
+    else if (s.dataset.f === "cmodesel") { ST.cmode = s.value; if (s.value === "only") ST.cols.delete("M"); refresh(); }
+    else if (s.dataset.f === "sub") { const v = s.value; if (v) TG.loadMembers().then(() => { ST.subs.add(v); refresh(); }); }
   }, true);
   const _scSetTab = scSetTab;
   scSetTab = async function (tab) { await _scSetTab(tab); if (tab === "members") { try { applyList(); } catch (e) { /* no bar on this page */ } } };
 
   window.TF = { enabled: true, sugg: sugg, refresh: refresh, state: () => ST, full: () => uniq(FULL.map(oidOf).filter(o => o != null)), shown: () => uniq(LIST.map(oidOf).filter(o => o != null)),
-    chips: () => { const idx = buildIndex(), full = uniq(FULL.map(oidOf).filter(o => o != null)); return chipsFor(uniq(LIST.map(oidOf).filter(o => o != null)), full, LISTKEY).map(c => ({ key: c.key, label: c.label, n: c.n, name: idx.name.get(c.key), loose: c.loose })); },
-    members: key => buildIndex().mem.get(key) || new Set(), reset: () => { ST = fresh(); ST.k = selected; } };
+    chips: () => { const idx = buildIndex(), full = uniq(FULL.map(oidOf).filter(o => o != null)); return chipSet(uniq(LIST.map(oidOf).filter(o => o != null)), full, LISTKEY).vis.map(c => ({ key: c.key, label: c.label, n: c.n, name: idx.name.get(c.key), loose: c.loose })); },
+    chipsAll: () => { const idx = buildIndex(), full = uniq(FULL.map(oidOf).filter(o => o != null)); return chipsFor(uniq(LIST.map(oidOf).filter(o => o != null)), full, LISTKEY).map(c => ({ key: c.key, label: c.label, n: c.n, size: c.size, name: idx.name.get(c.key) })); },
+    members: key => buildIndex().mem.get(key) || new Set(), reset: () => { ST = fresh(); ST.k = selected; },
+    colOk: colOk, facts: oid => { const f = factsOf(oid); return { col: f.col, ts: f.ts.slice(), mv: f.mv }; },
+    invalidate: () => { FACTS.clear(); },                                              // FLIP_FACES: the faces arrived after the first facts were read
+    // FLIP_FACES: which face is the reason a card is in the list now: "" (the face the page lists passes, or no filter is on), or a note naming the other face
+    faceNote: oid => {
+      if (!(window.FL && FL.on()) || !(ST.cols.size || ST.types.size)) return "";
+      const fl = FL.get(oid); if (!fl) return "";
+      const ok = (col, ty) => (!ST.cols.size || colOk(col, ST.cols, ST.cmode)) && (!ST.types.size || typesOf(ty).some(t => ST.types.has(t)));
+      if (ok(fl.f[fl.pf].c, fl.f[fl.pf].ty)) return "";
+      for (let i = 0; i < fl.f.length; i++) if (i !== fl.pf && ok(fl.f[i].c, fl.f[i].ty)) return "matched on its other face: " + fl.f[i].n;
+      return "matched across both faces";
+    } };
 })();

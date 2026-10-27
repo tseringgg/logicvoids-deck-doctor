@@ -6,7 +6,7 @@
  */
 "use strict";
 (function () {
-  const CFG = { feedbackUrl: "", prefill: "clipboard", titleParam: "title", bodyParam: "body", TESTER_FILTERS: false };
+  const CFG = { feedbackUrl: "", prefill: "clipboard", titleParam: "title", bodyParam: "body", TESTER_FILTERS: false, TYPE_GROUPS: false, FLIP_FACES: false };
   const $ = id => document.getElementById(id);
   const mobile = () => window.matchMedia("(max-width: 800px)").matches;
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -171,10 +171,21 @@
     s.onload = () => {
       try { Object.assign(CFG, window.APP_CONFIG || {}); } catch (e) { /* defaults */ }
       applyConfig();
-      if (!CFG.TESTER_FILTERS) { res(); return; }
       // feature TESTER_FILTERS: the filter and sort bar and "Narrow by group" (reports/testerfilters.js, .css); off: nothing is requested
+      // features TYPE_GROUPS (typegroups.js, .css) and FLIP_FACES (flipfaces.js, .css) load after it, one after the other; each off: nothing is requested. NARROW_NO_CUT and COLOUR_MODES live in testerfilters.js.
+      const extras = () => {
+        const chain = ["TYPE_GROUPS", "FLIP_FACES"].filter(n => CFG[n] === true).map(n => n === "TYPE_GROUPS" ? "typegroups" : "flipfaces");
+        const next = () => {
+          const n = chain.shift();
+          if (!n) { res(); return; }
+          const l = document.createElement("link"); l.rel = "stylesheet"; l.href = n + ".css"; document.head.appendChild(l);
+          const f = document.createElement("script"); f.src = n + ".js"; f.onload = next; f.onerror = next; document.head.appendChild(f);
+        };
+        next();
+      };
+      if (!CFG.TESTER_FILTERS) { extras(); return; }
       const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "testerfilters.css"; document.head.appendChild(l);
-      const f = document.createElement("script"); f.src = "testerfilters.js"; f.onload = () => res(); f.onerror = () => res(); document.head.appendChild(f);
+      const f = document.createElement("script"); f.src = "testerfilters.js"; f.onload = () => extras(); f.onerror = () => extras(); document.head.appendChild(f);
     };
     s.onerror = () => res();
     document.head.appendChild(s);
@@ -247,6 +258,7 @@
         if (/^(tf|tg|af|ag|lf|lg|ct|CT|LG):/.test(selected)) open.add("GL:");
         if (/^(u|UR):/.test(selected)) open.add("NG:");
         if (/^(Y|yk):/.test(selected)) open.add("Y:");
+        if (window.TG && TG.owns(selected)) TG.reveal(selected, open);                    // feature TYPE_GROUPS
       }
     }
     const h = [], t = TAX.totals;
@@ -291,7 +303,8 @@
     h.push(`<div class="blk">By keyword</div>`);
     h.push(row("l1", "Y:", "Cards with a keyword", KFAC ? KFAC.meta.cards_with_a_keyword : null, { kids: true }));
     if (KFAC && open.has("Y:")) for (const n of kwOrder()) h.push(row("l2", "yk:" + n, esc(KFAC.keywords[n].d), KFAC.keywords[n].n));
-    if (HG && Object.keys(HG.groups).length) {
+    if (window.TG && TG.enabled) for (const x of TG.treeRows(row, open, renderTree)) h.push(x);        // feature TYPE_GROUPS: "Card types"
+    if (HG &&Object.keys(HG.groups).length) {
       h.push(`<div class="blk">Extra groups</div>`);
       for (const slug of Object.keys(HG.groups)) { const g = HG.groups[slug]; if (g.retired) continue; h.push(row("l1", "hg:" + slug, esc(g.name), g.cards)); }
     }
@@ -306,7 +319,7 @@
   TREE.addEventListener("click", e => {                      // the two folders that are not pages
     const r = e.target.closest(".row"); if (!r) return;
     const k = r.dataset.k;
-    if (k === "GL:" || k === "NG:") { e.stopImmediatePropagation(); if (open.has(k)) open.delete(k); else open.add(k); renderTree(); }
+    if (k === "GL:" || k === "NG:" || (window.TG && TG.isFolder(k))) { e.stopImmediatePropagation(); if (open.has(k)) open.delete(k); else open.add(k); renderTree(); }
   }, true);
 
   // ---------------------------------------------------------------- group headers: name, one line, card count; one plain note for every group that is not a checked one
@@ -319,6 +332,7 @@
     } catch (err) { return ""; }
   }
   async function headFor(k) {
+    if (window.TG && TG.owns(k)) return TG.head(k);                                      // feature TYPE_GROUPS
     const i = k.indexOf(":"), kind = k.slice(0, i), id = k.slice(i + 1);
     let name = "", count = null, noun = "cards", path = "", desc = "", loose = false;
     const famName = key => { const f = TAX.families.find(x => x.key === key); return f ? f.name : ""; };
@@ -345,7 +359,7 @@
   function headHTML(name, count, noun, path, desc, loose) {
     return `<div class="thead">${path ? `<div class="crumb">${esc(path)}</div>` : ""}<h1>${esc(name)}</h1>${desc ? `<p class="tdesc">${esc(desc)}</p>` : ""}${count != null ? `<div class="tcnt">${fmt(count)} ${esc(noun)}</div>` : ""}${loose ? `<div class="tloosenote">${LOOSE_NOTE}</div>` : ""}</div>`;
   }
-  const LISTKINDS = /^(l|tg|lg|ct|ag|kl|gl|hg|V|u|yk|r):/;
+  const LISTKINDS = /^(l|tg|lg|ct|ag|kl|gl|hg|V|u|yk|r|ty):/;
   const _show = show;
   let KEEPDRAWER = false;
   show = async function (k) {
@@ -355,7 +369,7 @@
     if (k.startsWith("c:")) { await openCard(k.slice(2)); return; }
     if (/^(Y|yk):/.test(k)) KFWANT = true;
     PANEL.classList.add("tpend");
-    try { await _show(k); } finally { PANEL.classList.remove("tpend"); }
+    try { await (window.TG && TG.owns(k) ? TG.show(k) : _show(k)); } finally { PANEL.classList.remove("tpend"); }
     if (selected !== k && !(MERGED && MERGED.redirects[k])) return;
     let meta = null;
     if (LISTKINDS.test(k) || (MERGED && MERGED.redirects[k])) { try { meta = await headFor(k); } catch (e) { meta = null; } }
@@ -397,6 +411,7 @@
     openModal(`<div class="tbig">${img}</div><div class="tinfo"><h2>${esc(c.n)}</h2><div class="tsrc">${costHTML(c)} ${esc(c.ty)}</div><div class="toracle">${esc(c.t)}</div>` +
       `<h3>In these groups</h3><div>${chips}</div><p style="margin-top:12px"><a data-report="card" data-oid="${esc(oid)}" target="_blank" rel="noopener noreferrer" href="${esc(CFG.feedbackUrl || "#")}">Report a problem with this card</a></p></div>`);
     MODALFOR = oid;
+    if (window.FL) FL.attach(oid, modal);                       // feature FLIP_FACES
   }
   showCardPage = function (oid) { return openCard(oid); };
   PANEL.addEventListener("click", e => {                      // a tile or a card row opens the modal; its chips and links still do what they did
