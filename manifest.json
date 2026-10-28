@@ -1,6 +1,6 @@
 {
  "feedback_placeholder_still_in_config_js": false,
- "file_count": 2000,
+ "file_count": 2001,
  "files": [
   {
    "bytes": 9625,
@@ -246,6 +246,11 @@
    "bytes": 501895,
    "path": "build/annotation_placements.json",
    "sha256": "49c8835f7c5dd1c50a66276820a3ca85b25756afd6578b8a47a577511d961505"
+  },
+  {
+   "bytes": 8414,
+   "path": "build/buckets/map.json",
+   "sha256": "2bb6f8c4cf8c91ecdbbcd375754adfd43488cccd7c69864995905aa7bd200aaf"
   },
   {
    "bytes": 3677116,
@@ -9933,9 +9938,9 @@
    "sha256": "205887695d58e4d21336de7bdfc1f85ade3e588fc2ac1aeb70158be9bb57860d"
   },
   {
-   "bytes": 4026,
+   "bytes": 4638,
    "path": "reports/config.js",
-   "sha256": "bb6ca3bfb7a574e7b4f0613792b3d45dac71c9575dc865d1b31a36706f21329d"
+   "sha256": "ea80369a39efd8f622d52f40fa44798239fa05556730f39fcc540131d1c9613c"
   },
   {
    "bytes": 636,
@@ -9983,9 +9988,9 @@
    "sha256": "df4dee0a7b6e810f3b8664285854e8e7f4779dd94aa1a28d44492b458aab05c0"
   },
   {
-   "bytes": 36498,
+   "bytes": 48102,
    "path": "reports/testerfilters.js",
-   "sha256": "61ae5e22d3f1dcea4805e2f7de4faa83b482d0bb5d4e1f11cd692f2efd4175f0"
+   "sha256": "b7a131137a8be432390f7c4bbd647df78bac5ea6e8fe79f706534b354cb00780"
   },
   {
    "bytes": 499,
@@ -10007,9 +10012,9 @@
  "note": "Whitelist export of the tester view (src/export_static.py). Deterministic: no timestamps; sha256 of every file.",
  "size_report": {
   "data": {
-   "bytes": 34124425,
-   "files": 26,
-   "gzip6_bytes": 11529080
+   "bytes": 34132839,
+   "files": 27,
+   "gzip6_bytes": 11531541
   },
   "data:ability_pages": {
    "bytes": 249426,
@@ -10032,11 +10037,11 @@
    "gzip6_bytes": 19199
   },
   "page": {
-   "bytes": 385307,
+   "bytes": 397523,
    "files": 18,
-   "gzip6_bytes": 120891
+   "gzip6_bytes": 123997
   }
  },
- "total_bytes": 42480667,
- "total_gzip6_bytes": 13984602
+ "total_bytes": 42501297,
+ "total_gzip6_bytes": 13990169
 }
