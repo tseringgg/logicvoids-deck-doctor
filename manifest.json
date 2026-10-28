@@ -1,7 +1,222 @@
 {
  "feedback_placeholder_still_in_config_js": false,
- "file_count": 1955,
+ "file_count": 2000,
  "files": [
+  {
+   "bytes": 9625,
+   "path": "build/ability_pages/index.json",
+   "sha256": "ea9f53b0d3d16722910e72269fab39912703f7a2d8c0ad9dde91d94a1a9df435"
+  },
+  {
+   "bytes": 2417,
+   "path": "build/ability_pages/p/act.discard.json",
+   "sha256": "911333bdd2fb564addd316f3fe9a25530b717e0b98d95d538bc8ec2e25b3d759"
+  },
+  {
+   "bytes": 1277,
+   "path": "build/ability_pages/p/act.exile-gy.json",
+   "sha256": "5db679a549fb63f938d7cbe1bf3da8d70296ecf3eeded358a16be1ee30bdaf02"
+  },
+  {
+   "bytes": 6980,
+   "path": "build/ability_pages/p/act.loyalty.json",
+   "sha256": "7d741f88604a506dcc0ad23dac191a6e177b0410676514a974a3e6314fc050f6"
+  },
+  {
+   "bytes": 15993,
+   "path": "build/ability_pages/p/act.mana-abilities.json",
+   "sha256": "204ee50c8f4144bf2a6930b46eb29dd67a57a1e03c958bf2a17110caa6353d3c"
+  },
+  {
+   "bytes": 19399,
+   "path": "build/ability_pages/p/act.mana.json",
+   "sha256": "17a629971d72ae8f25c3ff23a1700c2eb910b3cb96415be595c909f6adb2a6b3"
+  },
+  {
+   "bytes": 1250,
+   "path": "build/ability_pages/p/act.pay-life.json",
+   "sha256": "abe4dad047c25f764630b60d9f1007f1c47a6de07a0edef41b9efabd0249d567"
+  },
+  {
+   "bytes": 2682,
+   "path": "build/ability_pages/p/act.remove-counter.json",
+   "sha256": "e3f70e3ff820201f7051f3bdeafda4720bb7e4fa73d0d78365eaf8060eba4540"
+  },
+  {
+   "bytes": 13792,
+   "path": "build/ability_pages/p/act.sacrifice.json",
+   "sha256": "fae7b22aeefe974a35a0872325974cb90f8776043d6e7f10ff3b265094c562be"
+  },
+  {
+   "bytes": 25081,
+   "path": "build/ability_pages/p/act.tap.json",
+   "sha256": "1742f9ae32168ea428175cf83a14d29926941e858c4a4f51d039dda96ab4f693"
+  },
+  {
+   "bytes": 2589,
+   "path": "build/ability_pages/p/repl.damage.json",
+   "sha256": "6c98a68c61235a123f4fe2fbed9d1db9cf22145e4b828ab8ce4831d535abc1ef"
+  },
+  {
+   "bytes": 512,
+   "path": "build/ability_pages/p/repl.dies-exile.json",
+   "sha256": "f8efd38fa302e0473f2253e04a29954f49b3ab438bd043b30b5429bc313dd701"
+  },
+  {
+   "bytes": 4363,
+   "path": "build/ability_pages/p/repl.etb-counters.json",
+   "sha256": "b470485fa4ed07d7366903f5e0543bc34b4875a690d12dd77eac90506d3b59e9"
+  },
+  {
+   "bytes": 5779,
+   "path": "build/ability_pages/p/repl.etb-tapped.json",
+   "sha256": "da7a2b8adb8b814701db7820f7f34817220bd3f04a5c84a2e45fac08200d3ee3"
+  },
+  {
+   "bytes": 4028,
+   "path": "build/ability_pages/p/stat.anthem.json",
+   "sha256": "d2baa4ee0d10f599028b4a3c8d942281d67759fd186a496bf1de3c0773f0eea1"
+  },
+  {
+   "bytes": 8555,
+   "path": "build/ability_pages/p/stat.attached-bonus.json",
+   "sha256": "a5bc8938f9c30be634760f4898a9489264785c8fa016315028b12275ac0c3cae"
+  },
+  {
+   "bytes": 1779,
+   "path": "build/ability_pages/p/stat.cant-attack.json",
+   "sha256": "703b8243c77547dcf1d222b3ce996a02a4a6b86fa3e8bf531e0767bbe9ac153d"
+  },
+  {
+   "bytes": 894,
+   "path": "build/ability_pages/p/stat.cant-be-countered.json",
+   "sha256": "f2fb56ba73b65fe1aaea9bfa9acd45ca5479a9a6f3218b74bb57e028d7279086"
+  },
+  {
+   "bytes": 1985,
+   "path": "build/ability_pages/p/stat.cant-block.json",
+   "sha256": "6c3cec69e0cbc21dfd1c8c590be01b8fccb0b1f84b766deef91a30c111857460"
+  },
+  {
+   "bytes": 1304,
+   "path": "build/ability_pages/p/stat.cant-untap.json",
+   "sha256": "3a4c9b447030c4db5e159730927b9535f32854f0f81670a8636b1ac0a47acecb"
+  },
+  {
+   "bytes": 629,
+   "path": "build/ability_pages/p/stat.cost-raise.json",
+   "sha256": "b2d04ee362fd5d33305d56f400a10c21fea2e5d1e84ffd18eca11401c297ed6c"
+  },
+  {
+   "bytes": 3781,
+   "path": "build/ability_pages/p/stat.cost-reduce.json",
+   "sha256": "72ace047bf97aff4efbf0c4df2ca27fc8b0369fe52f6043c0ffc27ab835a40b4"
+  },
+  {
+   "bytes": 2011,
+   "path": "build/ability_pages/p/stat.evasion.json",
+   "sha256": "fc8e7a43e00e8c0b9bb847c57c7b92955b260709b4fa8c882c3c53e9b4fc3d76"
+  },
+  {
+   "bytes": 4157,
+   "path": "build/ability_pages/p/stat.keyword-grant.json",
+   "sha256": "99c4c29b2387990566dba3208de6d305c1756b27a3ebe89ba4d321bfe96a9a42"
+  },
+  {
+   "bytes": 605,
+   "path": "build/ability_pages/p/stat.must-attack.json",
+   "sha256": "d79b02b92e0f3211e2138a49fb5db0f79a07240e124690948ee5554e7585ba64"
+  },
+  {
+   "bytes": 14314,
+   "path": "build/ability_pages/p/trig.attacks.json",
+   "sha256": "f6b87ca823d06883e0770ca0e8290ab78d52fa5a0761f0021c5095908d78f2d1"
+  },
+  {
+   "bytes": 736,
+   "path": "build/ability_pages/p/trig.becomes-target.json",
+   "sha256": "de69d0756630f0133a934d40e520ac84d75694adf0cef4d09869a884dd447e2d"
+  },
+  {
+   "bytes": 2696,
+   "path": "build/ability_pages/p/trig.begin-combat.json",
+   "sha256": "679f87886779103373038ed84b688800a7e3ebc3b018ba00886c1e740c11f4bb"
+  },
+  {
+   "bytes": 1521,
+   "path": "build/ability_pages/p/trig.blocks.json",
+   "sha256": "66c4458b313902193e0aef2f15617df0546eb5630e5ef2b44ddc88d2c28acc1a"
+  },
+  {
+   "bytes": 9927,
+   "path": "build/ability_pages/p/trig.cast.json",
+   "sha256": "6db52784094c078da0f9cceaf1a701219f1759fd71d08e609d647c5e94e08428"
+  },
+  {
+   "bytes": 6156,
+   "path": "build/ability_pages/p/trig.combat-damage.json",
+   "sha256": "04b78ecbaa4b2cd7e53cfe4c5d816b91fca0b18fda76af1a06d4a3be05e5ebe1"
+  },
+  {
+   "bytes": 597,
+   "path": "build/ability_pages/p/trig.counter-added.json",
+   "sha256": "783ef2b5b99907ea4374ea715bb66d37c232792b709cf6bbc2fedc28ca3ed149"
+  },
+  {
+   "bytes": 3755,
+   "path": "build/ability_pages/p/trig.dies-other.json",
+   "sha256": "d74841941931ba873019beba1f80c53781594ba6c8a43a4abbfa82a2816b4b32"
+  },
+  {
+   "bytes": 6170,
+   "path": "build/ability_pages/p/trig.dies.json",
+   "sha256": "6ade4a188ade2ff3d7eabd0614468897300598642e1b6798831150dd0f0a57fa"
+  },
+  {
+   "bytes": 995,
+   "path": "build/ability_pages/p/trig.draw.json",
+   "sha256": "1b6f7d1ad8bd8d0049463e48d4a161f57d91846b9b29effc6a08af2943fc0d86"
+  },
+  {
+   "bytes": 5900,
+   "path": "build/ability_pages/p/trig.end-step.json",
+   "sha256": "c09efc5084fc1cfac756cce2af1e9eb5f4c96cbace2243a8fbac9221c1342354"
+  },
+  {
+   "bytes": 6751,
+   "path": "build/ability_pages/p/trig.enters-other.json",
+   "sha256": "ee71da966861652cbee834c7d744e6945cd1cedbc0a862b05768ba230afc200c"
+  },
+  {
+   "bytes": 42967,
+   "path": "build/ability_pages/p/trig.enters.json",
+   "sha256": "e2a0cd2aa7ffdeff3769aa87d55d95f29aa8a344ad17e0f27eda8ae179074a23"
+  },
+  {
+   "bytes": 1811,
+   "path": "build/ability_pages/p/trig.landfall.json",
+   "sha256": "2d2706635a42ac40652baf6e39f2a59d720fbae3a89be04441ca76c2b6c111a9"
+  },
+  {
+   "bytes": 1509,
+   "path": "build/ability_pages/p/trig.leaves.json",
+   "sha256": "e6b8c312a7ae15d7e9d9d2e5b997094ef94fa5fddf6a1b51c77336c2ee2dfd38"
+  },
+  {
+   "bytes": 807,
+   "path": "build/ability_pages/p/trig.life-gained.json",
+   "sha256": "317f2666e9a9e19e7ab961965e3ba637644220bca808e284043ddddf67de15f9"
+  },
+  {
+   "bytes": 9193,
+   "path": "build/ability_pages/p/trig.upkeep.json",
+   "sha256": "cc5fd14d8ca1869309c0276f61cfe814799ca67be082a3b6511f668f42fae7da"
+  },
+  {
+   "bytes": 1779,
+   "path": "build/ability_pages/p/trig.you-attack.json",
+   "sha256": "d2436f49b0f666fd5e95a042f15bf21e0d0d8a9b3c131fa2c60c4d7e82cc74ec"
+  },
   {
    "bytes": 614474,
    "path": "build/ability_taxonomy.json",
@@ -9698,9 +9913,19 @@
    "sha256": "5ece9919cd2f42b5119aed1de4acdd3f3f2e01bc82af00a462fc3eaafd8ae243"
   },
   {
-   "bytes": 192678,
+   "bytes": 435,
+   "path": "reports/abilitypages.css",
+   "sha256": "311155550df425992d0d8aff5beedd8a931aa9cebc600af8a43104724815d6d0"
+  },
+  {
+   "bytes": 10732,
+   "path": "reports/abilitypages.js",
+   "sha256": "5063a2dfef628aea775c0792b2aa90b8b3accb9a174665e6c96e76a7109eb7ce"
+  },
+  {
+   "bytes": 192934,
    "path": "reports/browse.html",
-   "sha256": "3ace03a10bd1f4495951fc68017a43aeb7ece06bac5609f4a33dd867237ddd21"
+   "sha256": "7fe036507c210ea1b36db46e69d97c1609e85518b60031e4ab650f21ef38f4ca"
   },
   {
    "bytes": 4736,
@@ -9708,9 +9933,9 @@
    "sha256": "205887695d58e4d21336de7bdfc1f85ade3e588fc2ac1aeb70158be9bb57860d"
   },
   {
-   "bytes": 3310,
+   "bytes": 4026,
    "path": "reports/config.js",
-   "sha256": "b514bbc537ad3385bb15333d81b968e5306508325cab8be79508d7eb8d788065"
+   "sha256": "bb6ca3bfb7a574e7b4f0613792b3d45dac71c9575dc865d1b31a36706f21329d"
   },
   {
    "bytes": 636,
@@ -9748,9 +9973,9 @@
    "sha256": "9e6ffb956cbf2f1eb90e60fdd36d968a5007cb6b04b4d46e6f0d5b134e9038fe"
   },
   {
-   "bytes": 55441,
+   "bytes": 56024,
    "path": "reports/tester.js",
-   "sha256": "69ff727425d1af29924c62c9ba4484d9271be58935190806783a98c45a6627ad"
+   "sha256": "6e166730e66c7813925205c7d6942ebbb0e6c1b9443fe80e90fc9154628387a6"
   },
   {
    "bytes": 3677,
@@ -9758,9 +9983,9 @@
    "sha256": "df4dee0a7b6e810f3b8664285854e8e7f4779dd94aa1a28d44492b458aab05c0"
   },
   {
-   "bytes": 34557,
+   "bytes": 36498,
    "path": "reports/testerfilters.js",
-   "sha256": "531ec4076955085f9eb099cf2233230b7efd207335aee07d85fe01cfe75cc925"
+   "sha256": "61ae5e22d3f1dcea4805e2f7de4faa83b482d0bb5d4e1f11cd692f2efd4175f0"
   },
   {
    "bytes": 499,
@@ -9782,9 +10007,14 @@
  "note": "Whitelist export of the tester view (src/export_static.py). Deterministic: no timestamps; sha256 of every file.",
  "size_report": {
   "data": {
-   "bytes": 34114800,
-   "files": 25,
-   "gzip6_bytes": 11526192
+   "bytes": 34124425,
+   "files": 26,
+   "gzip6_bytes": 11529080
+  },
+  "data:ability_pages": {
+   "bytes": 249426,
+   "files": 42,
+   "gzip6_bytes": 97357
   },
   "data:suggested_cards": {
    "bytes": 5242880,
@@ -9802,11 +10032,11 @@
    "gzip6_bytes": 19199
   },
   "page": {
-   "bytes": 370644,
-   "files": 16,
-   "gzip6_bytes": 115595
+   "bytes": 385307,
+   "files": 18,
+   "gzip6_bytes": 120891
   }
  },
- "total_bytes": 42206953,
- "total_gzip6_bytes": 13879061
+ "total_bytes": 42480667,
+ "total_gzip6_bytes": 13984602
 }
