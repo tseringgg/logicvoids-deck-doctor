@@ -1,7 +1,12 @@
 {
  "feedback_placeholder_still_in_config_js": false,
- "file_count": 2001,
+ "file_count": 2005,
  "files": [
+  {
+   "bytes": 389367,
+   "path": "build/ability_pages/cards.json",
+   "sha256": "be4ddcd54208d69ba4f6b99292d868a8074530839aa2d15839382e50d06864ef"
+  },
   {
    "bytes": 9625,
    "path": "build/ability_pages/index.json",
@@ -261,6 +266,11 @@
    "bytes": 85,
    "path": "build/card_pin/meta.json",
    "sha256": "5b5f413706209a74d8d1fcde6ba2667ff46ad356c7e8a7e500f2243571c485a6"
+  },
+  {
+   "bytes": 33305,
+   "path": "build/colour_identity/cards.json",
+   "sha256": "13363604b9651a7be021fe5f9cd283181709edcf33d78dda477bf141e222f25d"
   },
   {
    "bytes": 452224,
@@ -9938,9 +9948,9 @@
    "sha256": "205887695d58e4d21336de7bdfc1f85ade3e588fc2ac1aeb70158be9bb57860d"
   },
   {
-   "bytes": 4638,
+   "bytes": 7490,
    "path": "reports/config.js",
-   "sha256": "ea80369a39efd8f622d52f40fa44798239fa05556730f39fcc540131d1c9613c"
+   "sha256": "ac2a8e2b74499f92d86c4cb24f920c7d3eccba1c5bd29f59defefa78f8eecf5c"
   },
   {
    "bytes": 636,
@@ -9953,9 +9963,9 @@
    "sha256": "a31f70890e3d82e666621b9fd43914c36e1e39f78bce22da56e36d3e9c0a52e3"
   },
   {
-   "bytes": 14589,
+   "bytes": 18376,
    "path": "reports/groupsearch.js",
-   "sha256": "134cfdf0a84842ab2954e3843c13777b7524651c060aa19e1703936d17829fb4"
+   "sha256": "034e62b7edb93962d01860d031545fa568801e5c3749e960917df3dfa25639b9"
   },
   {
    "bytes": 13497,
@@ -9968,6 +9978,16 @@
    "sha256": "57aa504ebe9ac4cfc071914d47c076a5938cb3a9f193c8ad5c1636c10d1596d6"
   },
   {
+   "bytes": 1673,
+   "path": "reports/modalabilities.css",
+   "sha256": "406fd2134d4f0ec410d8a3e0e4f478cf7009128ed42201b0944e95ad85ab181c"
+  },
+  {
+   "bytes": 10251,
+   "path": "reports/modalabilities.js",
+   "sha256": "8263e7c8f1293938a376bfce29c724d224bf9765636ee11575b7fea488d6fe42"
+  },
+  {
    "bytes": 5211,
    "path": "reports/suggested.js",
    "sha256": "7e680084c7470d067f67fe8b3b93c9f2ab50da61b9e06affb41c3c3bff555512"
@@ -9978,9 +9998,9 @@
    "sha256": "9e6ffb956cbf2f1eb90e60fdd36d968a5007cb6b04b4d46e6f0d5b134e9038fe"
   },
   {
-   "bytes": 56024,
+   "bytes": 61926,
    "path": "reports/tester.js",
-   "sha256": "6e166730e66c7813925205c7d6942ebbb0e6c1b9443fe80e90fc9154628387a6"
+   "sha256": "546a195ff188e561b066ad0d7e99664408ee78235b1e1f11e13e5563d314f265"
   },
   {
    "bytes": 3677,
@@ -9988,9 +10008,9 @@
    "sha256": "df4dee0a7b6e810f3b8664285854e8e7f4779dd94aa1a28d44492b458aab05c0"
   },
   {
-   "bytes": 48102,
+   "bytes": 58315,
    "path": "reports/testerfilters.js",
-   "sha256": "b7a131137a8be432390f7c4bbd647df78bac5ea6e8fe79f706534b354cb00780"
+   "sha256": "f4dd52caa02dd633daf40b7411e47bfe08b1cebce74ec995836ab99f8fe2fe56"
   },
   {
    "bytes": 499,
@@ -10012,9 +10032,9 @@
  "note": "Whitelist export of the tester view (src/export_static.py). Deterministic: no timestamps; sha256 of every file.",
  "size_report": {
   "data": {
-   "bytes": 34132839,
-   "files": 27,
-   "gzip6_bytes": 11531541
+   "bytes": 34555511,
+   "files": 29,
+   "gzip6_bytes": 11642493
   },
   "data:ability_pages": {
    "bytes": 249426,
@@ -10037,11 +10057,11 @@
    "gzip6_bytes": 19199
   },
   "page": {
-   "bytes": 397523,
-   "files": 18,
-   "gzip6_bytes": 123997
+   "bytes": 432201,
+   "files": 20,
+   "gzip6_bytes": 135483
   }
  },
- "total_bytes": 42501297,
- "total_gzip6_bytes": 13990169
+ "total_bytes": 42958647,
+ "total_gzip6_bytes": 14112607
 }
