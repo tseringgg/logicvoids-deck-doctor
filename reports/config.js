@@ -40,6 +40,12 @@
  *                           Flashback) ranks after the whole-word matches, and a typed word that is itself a group-name word is not also tried as its stem ("cycling" no longer reaches Cyclops; "cycl" still reaches
  *                           Cycling); groups whose only match is a description that is one member's quoted card line sit in one collapsed row; a list of more than 10 is two or three headed blocks of 10 with an
  *                           honest count. Presentation and ranking only. Absent or false means the search behaves, requests and exports exactly as before the flag existed.
+ *   BROWSE_GROUP_SEARCH     true: the groups in the search results are browse groups (the curated level over the fine groups, corrections/browse_groups.json): one row per browse group with its topic, card count, one line and
+ *                           what matched; "+N more matches" lists the other matching fine groups; a click opens the matched fine group (or the largest member) with a "Part of" strip of the members. Cards, type pages and
+ *                           ability pages keep their rows. Adds one data file, build/browse_search/index.json (src/build_browse_search.py), read at the FIRST SEARCH only. Needs SEARCH_FIXES for the fixed ranking.
+ *                           Presentation and ranking only. Absent or false means the search behaves, requests and exports exactly as before the flag existed.
+ *   UNIFIED_CARD_RESULTS    true: a card found by the name of its OTHER face is a row of the one card list (same row, the "In: ..." groups line, a "matched: other face" note), after the shown-face name matches, each card once, under one
+ *                           "Show N more", nothing after it. Needs FLIP_FACES. Presentation only; no file, no request. Absent or false means the search behaves, requests and exports exactly as before the flag existed.
  */
 window.APP_CONFIG = {
   feedbackUrl: "https://discord.gg/DUwMhDCcMg",
@@ -60,5 +66,7 @@ window.APP_CONFIG = {
   MODAL_ABILITIES: true,
   PERSIST_FILTERS: true,
   COLOUR_IDENTITY: true,
-  SEARCH_FIXES: true
+  SEARCH_FIXES: true,
+  BROWSE_GROUP_SEARCH: true,
+  UNIFIED_CARD_RESULTS: true
 };

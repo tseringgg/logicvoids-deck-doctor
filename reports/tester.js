@@ -6,7 +6,7 @@
  */
 "use strict";
 (function () {
-  const CFG = { feedbackUrl: "", prefill: "clipboard", titleParam: "title", bodyParam: "body", TESTER_FILTERS: false, TYPE_GROUPS: false, FLIP_FACES: false, DEFAULT_POPULARITY: false, ACTIVE_GROUP_HIGHLIGHT: false, QUERY_MATCH_BLOCK: false, ABILITY_TYPE_PAGES: false, ABILITY_TYPE_FILTERS: false, MODAL_ABILITIES: false };
+  const CFG = { feedbackUrl: "", prefill: "clipboard", titleParam: "title", bodyParam: "body", TESTER_FILTERS: false, TYPE_GROUPS: false, FLIP_FACES: false, DEFAULT_POPULARITY: false, ACTIVE_GROUP_HIGHLIGHT: false, QUERY_MATCH_BLOCK: false, ABILITY_TYPE_PAGES: false, ABILITY_TYPE_FILTERS: false, MODAL_ABILITIES: false, BROWSE_GROUP_SEARCH: false, UNIFIED_CARD_RESULTS: false };
   const $ = id => document.getElementById(id);
   const mobile = () => window.matchMedia("(max-width: 800px)").matches;
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -504,6 +504,28 @@
     if (gs.length) return `<span class="sub">In: ${gs.slice(0, 3).map(g => `<span class="lnk chip" data-go="${esc(g.key)}">${esc(g.name)}</span>`).join(" ")}${gs.length > 3 ? ` +${gs.length - 3} more` : ""}</span>`;
     return `<span class="sub">${en[3] === "v" ? "No rules text." : "Not grouped yet."}</span>`;
   }
+  // ---------------------------------------------------------------- feature UNIFIED_CARD_RESULTS (reports/config.js; needs FLIP_FACES): the cards found by the name of their OTHER face are part of the one card list.
+  // Off: none of this runs and reports/flipfaces.js adds its separate rows after the list as before. On: the shown-face name matches come first (as today, up to 12); then the other-face matches (a card whose shown face does not
+  // match but another face does: up to 6 more than the normal search already listed), in the same row format (name, "In: ..." groups, "matched: other face ..."), each card once; one "Show N more" for the whole list, and
+  // nothing after it. A card whose shown face matches is an ordinary row with no note, even if its other face matches too. The "N cards match" count includes every other-face match, shown or not.
+  const UCR = () => CFG.UNIFIED_CARD_RESULTS === true && CFG.FLIP_FACES === true && !!window.FL && FL.enabled === true;
+  const ofNote = name => `<span class="sub flipwhy">matched: other face “${esc(name)}”</span>`;
+  const withNote = (html, name) => html.replace(/<\/div>$/, ` ${ofNote(name)}</div>`);
+  let ENTBY = null;
+  async function unifyCards(q, r, rowOf) {
+    await FL.load();
+    if (!FL.loaded()) return null;
+    const hits = FL.hits(q), by = new Map(hits.map(h => [h.oid, h])), have = new Set(r.matches.map(en => en[0]));
+    const keep = r.matches.filter(en => !(by.get(en[0]) && by.get(en[0]).kind === "other")), moved = r.matches.filter(en => by.get(en[0]) && by.get(en[0]).kind === "other");
+    const add = hits.filter(h => h.kind === "other" && !have.has(h.oid));
+    const og = moved.map(en => ({ h: by.get(en[0]), en: en })).concat(add.map(h => ({ h: h, en: null })));
+    og.sort((a, b) => a.h.rank - b.h.rank || (CARDS[a.h.oid].n < CARDS[b.h.oid].n ? -1 : CARDS[a.h.oid].n > CARDS[b.h.oid].n ? 1 : 0));
+    const shown = og.slice(0, 6 + moved.length);
+    if (!ENTBY) { ENTBY = new Map(); for (const e of LIDX.lookup.entries) if (!ENTBY.has(e[0])) ENTBY.set(e[0], e); }          // a card the normal search did not list: its entry in the card list, so its row is built the same way
+    const rows = keep.map(rowOf).concat(shown.map(x => x.en || ENTBY.get(x.h.oid) ? withNote(rowOf(x.en || ENTBY.get(x.h.oid)), x.h.name) : "").filter(Boolean));
+    return { rows: rows, total: r.total + add.length };
+  }
+  const unifiedNote = (html, total, shown) => total > shown ? html.replace(/(<div class="sub">[\d,]+ cards match; showing )12\./, "$1" + shown + ".") : html.replace(/<div class="sub">[\d,]+ cards match; showing 12\.<\/div>/, "");
   find = async function (q) {
     const out = FR;
     if (!q.trim()) { out.innerHTML = ""; gsPending = null; return; }
@@ -511,19 +533,23 @@
     if (!LOOK) { out.innerHTML = `<div class="sub">Loading the card list…</div>`; await needLookup(); }
     await needManual();
     const ctx = answerCtx(), r = AbilityFind.search(LIDX, q, 12);
-    const rows = r.matches.map(en => {
+    const rowOf = en => {
       const a = AbilityFind.describe(LIDX, en, ctx);
       return `<div class="fr"${PINON && en[3] !== "o" ? ` tabindex="0" data-nav data-go="pin:${esc(en[0])}"` : (en[3] !== "o" ? ` tabindex="0" data-nav data-go="c:${esc(en[0])}"` : "")}><span class="nm">${esc(a.name)}</span>${a.others.length ? ` <span class="sub">(${a.others.map(esc).join(" / ")})</span>` : ""}${cardAnswer(en, a)}</div>`;
-    });
+    };
+    let rows = r.matches.map(rowOf), cardTotal = r.total;
+    if (UCR()) { try { const u = await unifyCards(q, r, rowOf); if (u) { rows = u.rows; cardTotal = u.total; } } catch (e) { if (window.console) console.warn("unified card results: " + e.message); } }
     try {
       await gsLoad(); await needLoose();
+      if (BGS()) await bgLoad();                                                                // feature BROWSE_GROUP_SEARCH: the browse-group file is read here, at the first search
       const so = { allow: gsAllow, words: GSWORDS };
       if (SFX()) { HPN = null; so.fixes = true; so.placed = handPlacedN; }
       let res = GroupSearch.search(GSIDX, q, so);
       if (res.needWords) { await gsWords(); so.words = GSWORDS; res = GroupSearch.search(GSIDX, q, so); }
       if (seq !== FINDSEQ) return;
-      if (!r.total && !res.groups.length && !res.family.length && !(res.example && res.example.length)) out.innerHTML = `<div class="sub">No card or group matches “${esc(q)}”. Try a card name, or a common term such as “board wipe”.</div>` + gsMissHTML(q);
-      else out.innerHTML = gsSection(q, rows, r.total, res);
+      if (BGS() && GSIDX.browse) res = bgRoll(res);
+      if (!cardTotal && !res.groups.length && !res.family.length && !(res.example && res.example.length)) out.innerHTML = `<div class="sub">No card or group matches “${esc(q)}”. Try a card name, or a common term such as “board wipe”.</div>` + gsMissHTML(q);
+      else out.innerHTML = UCR() ? unifiedNote(gsSection(q, rows, cardTotal, res), cardTotal, rows.length) : gsSection(q, rows, cardTotal, res);
     } catch (err) {
       out.innerHTML = (r.total ? "" : `<div class="sub">No card matches.</div>`) + rows.join("") + (r.total > 12 ? `<div class="sub">${fmt(r.total)} matches; showing 12.</div>` : "");
     }
@@ -563,6 +589,113 @@
     if (hid.length > 10) b.textContent = `Show ${Math.min(10, hid.length - 10)} more`;
     else { b.remove(); if (hid[0]) hid[0].focus(); }
   });
+
+
+  // ---------------------------------------------------------------- feature BROWSE_GROUP_SEARCH (reports/config.js): the groups in the search results are browse groups (src/build_browse_search.py), each holding the fine groups that matched.
+  // Off: none of this code runs, build/browse_search/index.json is neither exported nor requested, and the search is exactly what it was. On: the file is read at the FIRST SEARCH (never at page load, never when a group
+  // opens); if it is missing or broken the search silently stays as it was. A row is the browse group (name, topic, card count, one line, what matched); "+N more matches" lists the other matching fine groups; a click opens
+  // today's page of the matched fine group (or of the largest member when the browse group itself matched) with a "Part of" strip of the members. Presentation and ranking only: no group, id, placement, count or figure changes.
+  const BGS = () => CFG.BROWSE_GROUP_SEARCH === true;
+  let BGP = null, PENDBG = null, BGCTX = null;
+  const bgLoad = () => BGP || (BGP = (async () => {
+    try { await gsLoad(); const d = await J("browse_search/index.json"); if (d && GSIDX && !GSIDX.browse) GroupSearch.addBrowse(GSIDX, d); } catch (e) { /* the browse file is missing or broken: the search stays as it was */ }
+  })());
+  function bgRoll(res) {
+    const o = { allow: gsAllow }, main = GroupSearch.rollup(GSIDX, res.groups, o), seen = new Set(main.filter(r => r.kind === "bg").map(r => r.bg.id));
+    const fam = GroupSearch.rollup(GSIDX, res.family, o).filter(r => r.kind === "solo" || !seen.has(r.bg.id));
+    for (const r of fam) if (r.kind === "bg") seen.add(r.bg.id);
+    const ex = GroupSearch.rollup(GSIDX, res.example || [], o).filter(r => r.kind === "solo" || !seen.has(r.bg.id));
+    return Object.assign({}, res, { groups: main, family: fam, example: ex, rolled: true });
+  }
+  const bgCount = b => b.size ? `${fmt(b.size)} card${b.size === 1 ? "" : "s"}` : b.possible ? `0 placed · ${fmt(b.possible)} possible` : "0 cards";
+  function bgWhy(r) {
+    if (r.dym) return `did you mean “${esc(r.dym)}”`;
+    if (r.why === "alias") return r.drafted ? `suggested alias “${esc(r.via)}”` : `via “${esc(r.via)}”`;
+    if (r.own) return r.why === "name" && r.tier === 0 ? "Named exactly" : r.why === "most" ? "matched: most of your words" : r.why === "slug" ? "matched: tag name" : r.why === "description" ? "matched: description" : "";
+    return `matched: <b>${esc(r.best.e.name)}</b>` + (r.why === "description" ? " (its description)" : r.why === "most" ? " (most of the words)" : r.why === "slug" ? " (its tag name)" : "");
+  }
+  let BGN = 0;
+  function bgRowHTML(r) {
+    if (r.kind === "solo") return gsRow(r.best);
+    const b = r.bg, seen = new Set(), others = [];
+    for (const c of r.fine) { if (!r.own && c.e.gid === r.best.e.gid) continue; if (!seen.has(c.e.gid)) { seen.add(c.e.gid); others.push(c); } }
+    const inc = b.desc ? esc(b.desc) : b.inc.length ? `Includes: ${b.inc.map(esc).join(" · ")}${b.members.length > 3 ? ` +${b.members.length - 3} more` : ""}` : "";
+    const line = (b.other ? "Catch-all. " : "") + inc, why = bgWhy(r), id = `bgm${++BGN}`;
+    const gid = r.own ? b.id : r.best.e.gid, hits = r.hits.join(",");
+    let h = `<a class="gr bgr" data-nav data-go="${esc(r.open)}" href="#${esc(encodeURIComponent(r.open))}" data-bg="${esc(b.id)}" data-hits="${esc(hits)}" data-why="${esc(r.why)}" data-gid="${esc(gid)}" data-layer="${r.own ? "b" : esc(r.best.e.layer)}"${r.note && r.why === "alias" ? ` title="${esc(r.note)}"` : ""}>` +
+      `<span class="gc">${bgCount(b)}</span><span class="gn">${esc(b.full)}</span>${b.topics.length ? `<span class="gt">${esc(b.topics[0])}</span>` : ""}` +
+      (line ? `<span class="gi">${line}</span>` : "") + (why ? `<span class="gm">${why}</span>` : "") +
+      (r.why === "alias" && r.fit === "partial" && r.note ? `<span class="gl">Note: ${esc(r.note)}</span>` : "") + `</a>`;
+    if (others.length) {
+      h += `<button type="button" class="gs-btn bgmore" data-nav data-bgmore="${id}" aria-expanded="false" aria-controls="${id}">+${fmt(others.length)} more match${others.length === 1 ? "" : "es"} ▸</button>` +
+        `<div class="more-list" id="${id}" hidden>${others.slice(0, 30).map(c => { const key = memberOpen(c.e); return key ? `<a class="mm" data-nav data-go="${esc(key)}" href="#${esc(encodeURIComponent(key))}" data-bg="${esc(b.id)}" data-hits="${esc(c.e.gid)}">${esc(c.e.name)}</a>` : `<span class="mm">${esc(c.e.name)}</span>`; }).join("")}${others.length > 30 ? `<div class="sub">showing 30 of ${fmt(others.length)}</div>` : ""}</div>`;
+    }
+    return `<div class="bgw" tabindex="-1">${h}</div>`;
+  }
+  function memberOpen(e) { return gsAllow(e) || ""; }
+  const _gsSectionBG = gsSection;
+  gsSection = function (q, cardRows, cardTotal, res) {
+    if (!BGS() || !res.rolled) return _gsSectionBG(q, cardRows, cardTotal, res);
+    const nG = res.groups.length, ex = res.example || [];
+    let h = `<div class="gs-jump" id="gs-jump"><a href="#" data-gsjump="gs-cards">Cards (${fmt(cardTotal)})</a> · <a href="#" data-gsjump="gs-groups">Groups (${fmt(nG)}${res.family.length ? " + " + fmt(res.family.length) + " by family" : ""}${ex.length ? " + " + fmt(ex.length) + " in an example line" : ""})</a></div>`;
+    h += `<div id="gs-cards"><h3 class="gs-h">Cards</h3>` + (cardTotal ? gsMore(cardRows, GSCARDS_FIRST, "cards") + (cardTotal > 12 ? `<div class="sub">${fmt(cardTotal)} cards match; showing 12.</div>` : "") : `<div class="sub gs-none">No card name matches.</div>`) + `</div>`;
+    h += `<div id="gs-groups"><h3 class="gs-h">Groups</h3>`;
+    if (res.dym) h += `<div class="sub gs-dym">Nothing matched “${esc(res.dym.from)}” as typed. Did you mean “${esc(res.dym.to)}”? Those groups are listed with that label.</div>`;
+    if (!nG) h += `<div class="sub gs-none">No group matches “${esc(q)}”.</div>`;
+    else {
+      const rows = res.groups.slice(0, GSCAP).map(bgRowHTML);
+      h += `<div class="sub">${fmt(nG)} group${nG === 1 ? "" : "s"} match${nG > GSCAP ? `; showing ${GSCAP}` : ""}.</div>` + rows.slice(0, 10).join("") + rows.slice(10).map(x => x.replace(/^<(a|div) /, `<$1 hidden data-gsfx="bg" `)).join("") +
+        (rows.length > 10 ? `<button class="gs-btn" data-nav data-gsfxmore="bg">Show ${Math.min(10, rows.length - 10)} more</button>` : "");
+    }
+    const fold = (list, what) => list.length ? `<div class="gs-fam"><button class="gs-btn gs-famb" data-nav data-gsfam aria-expanded="false">${fmt(list.length)} more group${list.length === 1 ? "" : "s"} matched only ${what} ▸</button><div class="gs-famlist" hidden>${list.slice(0, GSCAP).map(bgRowHTML).join("")}${list.length > GSCAP ? `<div class="sub">showing ${GSCAP} of ${fmt(list.length)}</div>` : ""}</div></div>` : "";
+    h += fold(res.family, "by family or kind") + fold(ex, "in an example card line").replace(/matched: description/g, "matched: an example card line");
+    return h + gsMissHTML(q, nG, cardTotal) + `</div><div class="sr-only" aria-live="polite" id="gs-live">${nG} group${nG === 1 ? "" : "s"}, ${cardTotal} card${cardTotal === 1 ? "" : "s"}</div>`;
+  };
+  function initBrowseGroups() {
+    if (!BGS()) return;
+    const st = document.createElement("style");
+    st.textContent = ".gr .gt{display:inline-block;font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:0 7px;margin-left:6px;white-space:nowrap;font-weight:400}" +
+      ".gr .gi{display:block;font-size:13px;color:var(--muted)}.gr .gm b{font-style:normal;font-weight:600;color:var(--fg)}" +
+      ".bgmore{display:inline-block;margin:0 0 4px;font-size:13px}.more-list{margin:0 0 6px 14px;padding-left:8px;border-left:2px solid var(--line)}.more-list[hidden]{display:none}" +
+      ".more-list .mm{display:block;padding:8px 6px;font-size:13px;min-height:44px;color:var(--accent);text-decoration:none}.more-list .sub{padding:2px 6px}" +
+      ".bgstrip{border:1px solid var(--accent);border-radius:8px;background:var(--panel);padding:8px 10px;margin:8px 0}.bgstrip .st{font-weight:600}.bgstrip .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}" +
+      "body.tester .bgstrip .chip{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:14px;padding:4px 10px;font-size:13px;min-height:44px;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer;font:inherit;font-size:13px}" +
+      ".bgstrip .chip.cur{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);font-weight:600}.bgstrip .chip.hit{background:#fff0a8;color:#1d1d1b;border-color:#c9a800}.bgstrip .chip small{color:var(--muted);margin-left:6px;font-weight:400}.bgstrip .chip.hit small{color:#444}" +
+      ".bgstrip .chip[hidden]{display:none}.bgstrip .note{color:var(--muted);font-size:12.5px;margin-top:6px}";
+    document.head.appendChild(st);
+    const canon = k => (k && MERGED && MERGED.redirects && MERGED.redirects[k] && k !== ALONEKEY) ? "P:" + MERGED.redirects[k] : k;
+    const pick = e => { const a = e.target.closest("[data-bg]"); if (a) PENDBG = { bg: a.dataset.bg, hits: (a.dataset.hits || "").split(",").filter(Boolean) }; };
+    FR.addEventListener("click", pick, true);
+    PANEL.addEventListener("click", e => { pick(e); const b = e.target.closest("[data-bgchips]"); if (b) { for (const c of PANEL.querySelectorAll(".bgstrip .chip[hidden]")) c.hidden = false; b.remove(); } }, true);
+    FR.addEventListener("click", e => {
+      const b = e.target.closest("[data-bgmore]"); if (!b) return;
+      const l = document.getElementById(b.dataset.bgmore), open = l.hidden;
+      l.hidden = !open; b.setAttribute("aria-expanded", open ? "true" : "false"); b.textContent = b.textContent.replace(/[▸▾]$/, open ? "▾" : "▸");
+    });
+    function strip() {
+      const old = $("bgstrip"); if (old) old.remove();
+      if (!BGCTX || !GSIDX || !GSIDX.browse) return;
+      const inf = GSIDX.browse.info[BGCTX.bg], head = PANEL.querySelector(".thead");
+      if (!inf || !head || !selected) return;
+      const ms = inf.members.slice().sort((x, y) => (GSIDX.browse.size[y] || 0) - (GSIDX.browse.size[x] || 0) || (x < y ? -1 : 1));
+      const chips = ms.map(g => ({ g: g, key: GroupSearch.pageKey(g), n: MI && MI.groups[g] ? MI.groups[g][1] : null, name: MI && MI.groups[g] ? MI.groups[g][0] : g })).filter(c => c.key);
+      const cur = canon(selected);
+      if (!chips.some(c => canon(c.key) === cur)) { BGCTX = null; return; }
+      const hits = new Set(BGCTX.hits), anyHit = chips.some(c => hits.has(c.g));
+      const box = el("div", "bgstrip"); box.id = "bgstrip";
+      const chip = (c, i) => `<a class="chip${canon(c.key) === cur ? " cur" : ""}${hits.has(c.g) ? " hit" : ""}"${canon(c.key) === cur ? ' aria-current="true"' : ""}${i >= 8 ? " hidden" : ""} data-nav data-go="${esc(c.key)}" href="#${esc(encodeURIComponent(c.key))}" data-bg="${esc(inf.id)}" data-hits="${esc(BGCTX.hits.join(","))}">${esc(c.name)}${c.n != null ? `<small>${fmt(c.n)}</small>` : ""}${hits.has(c.g) ? `<span class="sr-only"> (matched your search)</span>` : ""}</a>`;
+      box.innerHTML = `<div class="st">Part of <b>${esc(inf.full)}</b> · ${bgCount(inf)} in ${fmt(chips.length)} group${chips.length === 1 ? "" : "s"}</div><div class="chips">${chips.map(chip).join("")}${chips.length > 8 ? `<button type="button" class="chip" data-bgchips>+${chips.length - 8} more ▸</button>` : ""}</div>` +
+        (anyHit ? `<div class="note">Highlighted: the group${hits.size > 1 ? "s" : ""} your search matched.</div>` : "");
+      head.insertAdjacentElement("afterend", box);
+    }
+    const _show = show;
+    show = async function (k) {
+      if (PENDBG) { BGCTX = PENDBG; PENDBG = null; } else if (BGCTX && !/^(l|tg|lg|ct|kl|gl|hg|P|page):/.test(k || "")) BGCTX = null;
+      const r = await _show(k);
+      try { strip(); } catch (e) { if (window.console) console.error("browse strip", e); }
+      return r;
+    };
+  }
 
   // ---------------------------------------------------------------- landing
   function landing() {
@@ -747,5 +880,5 @@
     window.QMB_REFRESH = () => { if (QM) renderQM().catch(() => { /* the block is a convenience */ }); };
     window.QMB = { state: () => (QM ? { q: QM.q, key: QM.key, n: QM.n } : null), match: (line, q) => matchLine(line, parse(q)) };
   }
-  loadConfig().then(() => { try { initDeckFlags(); } catch (e) { if (window.console) console.error("deck flags", e); } window.__testerGo(); });
+  loadConfig().then(() => { try { initDeckFlags(); } catch (e) { if (window.console) console.error("deck flags", e); } try { initBrowseGroups(); } catch (e) { if (window.console) console.error("browse groups", e); } window.__testerGo(); });
 })();

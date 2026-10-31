@@ -100,8 +100,24 @@
     if (host === out && nolist && /No card or group matches/.test(nolist.textContent)) nolist.remove();
     host.insertAdjacentHTML("beforeend", html);
   }
+  // feature UNIFIED_CARD_RESULTS (tester.js unifyCards): the cards whose name matches the query on a face, as {oid, kind: "shown" (the face the page lists matches) | "other" (only another face does), rank, name (the matching face's name)}.
+  // The match rule is the one supplement() uses. With the flag on, supplement() is not run: tester.js puts these cards in the one card list.
+  function hits(q) {
+    const nq = norm(q), out = [];
+    if (!DATA || nq.length < 3) return out;
+    const words = nq.split(" ");
+    const ok = fnm => fnm === nq || fnm.indexOf(nq) === 0 || words.every(w => fnm.split(" ").some(x => x.indexOf(w) === 0));
+    for (const [oid, fl] of Object.entries(DATA.cards)) {
+      if (!CARDS[oid]) continue;
+      const names = fl.f.map(f => norm(f.n)), pf = fl.pf, rk = i => (names[i] === nq ? 0 : names[i].indexOf(nq) === 0 ? 1 : 2);
+      if (ok(names[pf])) out.push({ oid: oid, kind: "shown", rank: rk(pf), name: fl.f[pf].n });
+      else if (ok(names[1 - pf])) out.push({ oid: oid, kind: "other", rank: rk(1 - pf), name: fl.f[1 - pf].n });
+    }
+    return out;
+  }
+  const unified = () => !!(window.APP_CONFIG && window.APP_CONFIG.UNIFIED_CARD_RESULTS === true);
   const _find = find;
-  find = async function (q) { await _find(q); try { await supplement(q); } catch (e) { if (window.console) console.warn("flipfaces search: " + e.message); } };
+  find = async function (q) { await _find(q); if (unified()) return; try { await supplement(q); } catch (e) { if (window.console) console.warn("flipfaces search: " + e.message); } };
 
   // ---------------------------------------------------------------- lists: load the faces when the first group page opens; a card shown for its other face says so
   const _setList = setList;
@@ -120,5 +136,5 @@
   const _renderList = renderList;
   renderList = function () { _renderList(); try { decorate(); } catch (e) { /* the list is as it was */ } };
 
-  window.FL = { enabled: true, on: () => true, load: load, get: get, attach: attach, loaded: () => !!DATA };
+  window.FL = { enabled: true, on: () => true, load: load, get: get, attach: attach, loaded: () => !!DATA, hits: hits };
 })();

@@ -139,8 +139,8 @@ var GroupSearch = (function () {
         idx.gwCount[w]++;
       }
     }
-    for (k = 0; k < doc.groups.length; k++) {
-      g = doc.groups[k];
+    function addGroup(g) {
+      var k = idx.entries.length;
       e = { i: k, gid: g[0], key: g[1], name: g[2], path: g[3], layer: g[4], size: g[5], auto: g[6], desc: g[7], descDraft: g[8], twin: g[9], slug: g[10] };
       e.ns = stems(e.name); e.nkey = e.ns.join(" ");
       e.extras = g[11] || []; e.members = g[12] || [];
@@ -160,6 +160,8 @@ var GroupSearch = (function () {
       idx.byGid[e.gid] = e;
       addWords(e.name); addWords(e.slug);
     }
+    for (k = 0; k < doc.groups.length; k++) addGroup(doc.groups[k]);
+    idx._add = addGroup; idx._words = addWords;
     for (ph in doc.aliases) {
       if (!has(doc.aliases, ph)) continue;
       a = doc.aliases[ph];
@@ -313,7 +315,126 @@ var GroupSearch = (function () {
     return out;
   }
 
-  return { build: build, search: search, norm: norm, stem: stem, variants: variants, dl: dl, known: known, real: real, nearest: nearest, LAYER_RANK: LAYER_RANK };
+
+  // ---------------------------------------------------------------- feature BROWSE_GROUP_SEARCH (reports/config.js): browse groups over the fine groups. Pure, ES5, no DOM; nothing below runs unless addBrowse() is called.
+  //   GroupSearch.addBrowse(idx, doc)      doc = build/browse_search/index.json (src/build_browse_search.py). Adds each browse group as an entry (layer "b") indexed under its name WITHOUT a trailing " (qualifier)",
+  //                                        re-points every alias that points at a fine group at the browse group(s) holding it (primary group first), and adds the browse groups' own aliases. idx.browse holds the rest.
+  //   GroupSearch.rollup(idx, cands, o)    cands = r.groups (or r.family / r.example) of a search; -> rows, best first: one row per browse group (its best match: the browse group's own name or alias, or its best member's tier),
+  //                                        and unchanged rows for keyword filters, type pages and ability pages (they are in no browse group). A fine group in two browse groups feeds both rows.
+  //   Rows: {kind "bg"|"solo", e, tier, best, own, fine [other matching member entries' cands], hits [matched fine ids], bg, open (the page key to open), why, via, dym, drafted, fit, note}.
+  //   Ranking: tier (as today; an exact alias keeps its alias order); then a catch-all ("Other: ...") after everything else of that tier; then browse groups whose name was hand-reviewed; then the matched entry's own score (as today); then size.
+  function baseName(n) { return n.replace(/ \([^)]*\)$/, ""); }
+  function pageKey(gid) {
+    var p = gid.indexOf(":"), l = gid.slice(0, p), r = gid.slice(p + 1);
+    return { leaf: "l:" + r, tent: "tg:" + r, loose: "lg:" + r, tag: "ct:" + r, kw: "kl:" + gid, rp: "gl:" + r, hand: "hg:" + r, yk: "yk:" + r }[l] || "";
+  }
+  function addBrowse(idx, bd) {
+    var B = { info: {}, fineBg: {}, order: [], size: {}, topics: bd.topics }, k, j, r, inf, g, ids, a, al, key, news, seen, x, ent, bs, y;
+    LAYER_RANK.b = -1;
+    for (k = 0; k < bd.fine.length; k++) B.size[bd.fine[k]] = bd.msize[k];
+    for (k = 0; k < bd.bg.length; k++) {
+      r = bd.bg[k];
+      inf = { id: r[0], full: r[1], topics: r[2].map(function (t) { return bd.topics[t]; }), size: r[3], desc: r[4], aliases: r[5], reviewed: r[6], prim: r[7].map(function (i) { return bd.fine[i]; }), sec: r[8].map(function (i) { return bd.fine[i]; }),
+        possible: r[9], inc: r[10], other: /^Other:/.test(r[1]) };
+      inf.members = inf.prim.concat(inf.sec);
+      B.info[inf.id] = inf; B.order.push(inf.id);
+      idx._add([inf.id, inf.id, baseName(inf.full), "", "b", inf.size, 0, inf.desc, 0, "", ""]);
+    }
+    for (y = 0; y < 2; y++) for (k = 0; k < B.order.length; k++) {                // primary groups first
+      inf = B.info[B.order[k]];
+      ids = y ? inf.sec : inf.prim;
+      for (j = 0; j < ids.length; j++) (B.fineBg[ids[j]] || (B.fineBg[ids[j]] = [])).push(inf.id);
+    }
+    idx.browse = B;
+    for (k = 0; k < idx.aliases.length; k++) {                                     // an alias that points at a fine group points at its browse group(s)
+      a = idx.aliases[k]; news = []; seen = {};
+      for (j = 0; j < a.gids.length; j++) {
+        ent = idx.byGid[a.gids[j]];
+        bs = ent && (ent.layer === "ty" || ent.layer === "ab" || ent.layer === "y") ? [] : fineOf(idx, ent, a.gids[j]);
+        if (!bs.length) bs = [a.gids[j]];
+        for (x = 0; x < bs.length; x++) if (!has(seen, bs[x])) { seen[bs[x]] = 1; news.push(bs[x]); }
+      }
+      a.gids = news.slice(0, 5);
+    }
+    for (k = 0; k < B.order.length; k++) {                                         // the browse groups' own aliases
+      inf = B.info[B.order[k]];
+      for (j = 0; j < inf.aliases.length; j++) {
+        al = inf.aliases[j]; key = stems(al).join(" ");
+        if (!key) continue;
+        if (has(idx.aliasByKey, key)) { if (idx.aliasByKey[key].gids.indexOf(inf.id) < 0) idx.aliasByKey[key].gids.push(inf.id); continue; }
+        a = { k: key, p: al, stems: stems(al), gids: [inf.id], fit: "good", note: "", s: "hand", key: key };
+        idx.aliases.push(a); idx.aliasByKey[key] = a; idx._words(al);
+      }
+    }
+    idx.gwList.sort();
+    return idx;
+  }
+  function fineOf(idx, ent, gid) {                                                 // the browse groups a fine (or merged-page) entry belongs to, primary first
+    var B = idx.browse, out = [], k, j, m, l;
+    if (ent && ent.layer === "m") {
+      for (k = 0; k < ent.members.length; k++) { l = B.fineBg[ent.members[k]] || []; for (j = 0; j < l.length; j++) if (out.indexOf(l[j]) < 0) out.push(l[j]); }
+      return out;
+    }
+    return B.fineBg[ent ? ent.gid : gid] || [];
+  }
+  function memberKey(idx, gid, allow) {                                           // the page key a fine group opens with now ("" when its layer is switched off)
+    var ent = idx.byGid[gid], key;
+    if (ent) { key = allow ? allow(ent) : ent.key; return key || ""; }
+    return pageKey(gid);
+  }
+  function openKey(idx, inf, allow) {                                             // the largest member that can be opened
+    var ms = inf.members.slice().sort(function (x, y) { var d = (idx.browse.size[y] || 0) - (idx.browse.size[x] || 0); return d || (x < y ? -1 : 1); }), k, key;
+    for (k = 0; k < ms.length; k++) { key = memberKey(idx, ms[k], allow); if (key) return key; }
+    return "";
+  }
+  function rollup(idx, cands, o) {
+    var B = idx.browse, acc = {}, order = [], solo = [], k, j, c, e, bs, s, row, cs, best, out = [], i, hits, seen, allow = o && o.allow;
+    function slot(id) { if (!has(acc, id)) { acc[id] = { own: null, fine: [] }; order.push(id); } return acc[id]; }
+    for (k = 0; k < cands.length; k++) {
+      c = cands[k]; e = c.e;
+      if (e.layer === "b") { slot(e.gid).own = c; continue; }
+      bs = (e.layer === "ty" || e.layer === "ab" || e.layer === "y") ? [] : fineOf(idx, e);
+      if (!bs.length) { solo.push(c); continue; }
+      for (j = 0; j < bs.length; j++) slot(bs[j]).fine.push(c);
+    }
+    function better(a, b) {                                                       // a is a better match than b
+      if (a.tier !== b.tier) return a.tier < b.tier;
+      if (a.tier === 1 && a.order !== b.order) return a.order < b.order;
+      if (a.e.score !== b.e.score) return a.e.score > b.e.score;
+      return a.e.gid < b.e.gid;
+    }
+    for (k = 0; k < order.length; k++) {
+      s = acc[order[k]]; cs = (s.own ? [s.own] : []).concat(s.fine); best = cs[0];
+      for (j = 1; j < cs.length; j++) if (better(cs[j], best) || (!better(best, cs[j]) && cs[j] === s.own)) best = cs[j];
+      seen = {}; hits = [];
+      for (j = 0; j < s.fine.length; j++) {
+        e = s.fine[j].e;
+        var ids = e.layer === "m" ? e.members.filter(function (m) { return B.info[order[k]].members.indexOf(m) >= 0; }) : [e.gid];
+        for (i = 0; i < ids.length; i++) if (!has(seen, ids[i])) { seen[ids[i]] = 1; hits.push(ids[i]); }
+      }
+      row = { kind: "bg", bg: B.info[order[k]], e: idx.byGid[order[k]], tier: best.tier, best: best, own: best === s.own, fine: s.fine, hits: hits, why: best.why, via: best.via, dym: best.dym, drafted: best.drafted, fit: best.fit, note: best.note, key: best.key };
+      row.open = row.own || !best.key ? openKey(idx, row.bg, allow) : best.key;
+      if (!row.open) row.open = openKey(idx, row.bg, allow);
+      if (row.open) out.push(row);
+    }
+    for (k = 0; k < solo.length; k++) out.push({ kind: "solo", bg: null, e: solo[k].e, tier: solo[k].tier, best: solo[k], own: true, fine: [], hits: [], why: solo[k].why, via: solo[k].via, dym: solo[k].dym, drafted: solo[k].drafted, fit: solo[k].fit, note: solo[k].note, key: solo[k].key, open: solo[k].key });
+    function sz(r) { return r.kind === "bg" ? r.bg.size : r.e.size; }
+    out.sort(function (a, b) {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      if (a.tier === 1 && a.best.order !== b.best.order) return a.best.order - b.best.order;
+      var ao = a.bg && a.bg.other ? 1 : 0, bo = b.bg && b.bg.other ? 1 : 0, ar = a.bg && a.bg.reviewed ? 1 : 0, br = b.bg && b.bg.reviewed ? 1 : 0;
+      if (ao !== bo) return ao - bo;
+      if (ar !== br) return br - ar;
+      if (a.best.e.score !== b.best.e.score) return b.best.e.score - a.best.e.score;
+      if (sz(a) !== sz(b)) return sz(b) - sz(a);
+      if (LAYER_RANK[a.e.layer] !== LAYER_RANK[b.e.layer]) return LAYER_RANK[a.e.layer] - LAYER_RANK[b.e.layer];
+      if (a.e.name !== b.e.name) return a.e.name < b.e.name ? -1 : 1;
+      return a.e.gid < b.e.gid ? -1 : a.e.gid > b.e.gid ? 1 : 0;
+    });
+    return out;
+  }
+
+  return { build: build, addBrowse: addBrowse, rollup: rollup, pageKey: pageKey, search: search, norm: norm, stem: stem, variants: variants, dl: dl, known: known, real: real, nearest: nearest, LAYER_RANK: LAYER_RANK };
 })();
 
 if (typeof module !== "undefined") module.exports = GroupSearch;

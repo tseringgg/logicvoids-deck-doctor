@@ -1,6 +1,6 @@
 {
  "feedback_placeholder_still_in_config_js": false,
- "file_count": 2005,
+ "file_count": 2006,
  "files": [
   {
    "bytes": 389367,
@@ -251,6 +251,11 @@
    "bytes": 501895,
    "path": "build/annotation_placements.json",
    "sha256": "49c8835f7c5dd1c50a66276820a3ca85b25756afd6578b8a47a577511d961505"
+  },
+  {
+   "bytes": 147749,
+   "path": "build/browse_search/index.json",
+   "sha256": "23f9a7962b3150c32999b3087d2e870b9200112f678c463132db14c028908f79"
   },
   {
    "bytes": 8414,
@@ -9948,9 +9953,9 @@
    "sha256": "205887695d58e4d21336de7bdfc1f85ade3e588fc2ac1aeb70158be9bb57860d"
   },
   {
-   "bytes": 7490,
+   "bytes": 8826,
    "path": "reports/config.js",
-   "sha256": "ac2a8e2b74499f92d86c4cb24f920c7d3eccba1c5bd29f59defefa78f8eecf5c"
+   "sha256": "182ddd4f37b2ac9deeb422feaedd13340e5fc0c7cb9025473227bd1b77ea123e"
   },
   {
    "bytes": 636,
@@ -9958,14 +9963,14 @@
    "sha256": "43bc8026fe40ee2b32c122c268a760ed68f3cd2180f096bdd780441f542c4ec0"
   },
   {
-   "bytes": 8566,
+   "bytes": 9793,
    "path": "reports/flipfaces.js",
-   "sha256": "a31f70890e3d82e666621b9fd43914c36e1e39f78bce22da56e36d3e9c0a52e3"
+   "sha256": "1eb5c2b7e18d616f1e39a6b9561b2fc47e09d5e20a448b567c495920b4fac746"
   },
   {
-   "bytes": 18376,
+   "bytes": 26837,
    "path": "reports/groupsearch.js",
-   "sha256": "034e62b7edb93962d01860d031545fa568801e5c3749e960917df3dfa25639b9"
+   "sha256": "bc20d46d0b5ad9e8f02b1e6e1cf7a48c18c07ed508e65e226baec4dfdcfba205"
   },
   {
    "bytes": 13497,
@@ -9998,9 +10003,9 @@
    "sha256": "9e6ffb956cbf2f1eb90e60fdd36d968a5007cb6b04b4d46e6f0d5b134e9038fe"
   },
   {
-   "bytes": 61926,
+   "bytes": 76455,
    "path": "reports/tester.js",
-   "sha256": "546a195ff188e561b066ad0d7e99664408ee78235b1e1f11e13e5563d314f265"
+   "sha256": "1c83efaf1f193e02682b8ee354136e0c21a1ad35c9edfa0875d6eb784d8d8059"
   },
   {
    "bytes": 3677,
@@ -10032,9 +10037,9 @@
  "note": "Whitelist export of the tester view (src/export_static.py). Deterministic: no timestamps; sha256 of every file.",
  "size_report": {
   "data": {
-   "bytes": 34555511,
-   "files": 29,
-   "gzip6_bytes": 11642493
+   "bytes": 34703260,
+   "files": 30,
+   "gzip6_bytes": 11688169
   },
   "data:ability_pages": {
    "bytes": 249426,
@@ -10057,11 +10062,11 @@
    "gzip6_bytes": 19199
   },
   "page": {
-   "bytes": 432201,
+   "bytes": 457754,
    "files": 20,
-   "gzip6_bytes": 135483
+   "gzip6_bytes": 142458
   }
  },
- "total_bytes": 42958647,
- "total_gzip6_bytes": 14112607
+ "total_bytes": 43131949,
+ "total_gzip6_bytes": 14165258
 }
